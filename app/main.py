@@ -36,24 +36,9 @@ def health() -> dict:
     return {"status": "ok", "timestamp": datetime.utcnow().isoformat()}
 
 
-@app.post("/jobs", response_model=JobResponse)
-def create_job(payload: JobCreate) -> JobResponse:
-    job = Job(
-        name=payload.name,
-        priority=payload.priority,
-        parameters=json.dumps(payload.parameters if payload.parameters is not None else {}),
-        max_retries=payload.max_retries,
-        status=JobStatus.queued,
-    )
-    with create_session() as session:
-        session.add(job)
-        session.commit()
-        session.refresh(job)
-    return job
-
-
 @app.post("/jobs/decompose", response_model=DecomposeResult)
 def decompose_job(payload: DecomposeRequest) -> DecomposeResult:
+    """Decompose natural-language instruction into a task graph and enqueue."""
     graph = decompose_instruction(payload.instruction)
     job = Job(
         name=f"decomposed: {payload.instruction[:64]}",
@@ -69,8 +54,26 @@ def decompose_job(payload: DecomposeRequest) -> DecomposeResult:
     return DecomposeResult(instruction=payload.instruction, graph=graph, job_id=job.id)
 
 
+@app.post("/jobs", response_model=JobResponse)
+def create_job(payload: JobCreate) -> JobResponse:
+    """Submit a single simulation job."""
+    job = Job(
+        name=payload.name,
+        priority=payload.priority,
+        parameters=json.dumps(payload.parameters if payload.parameters is not None else {}),
+        max_retries=payload.max_retries,
+        status=JobStatus.queued,
+    )
+    with create_session() as session:
+        session.add(job)
+        session.commit()
+        session.refresh(job)
+    return job
+
+
 @app.get("/jobs", response_model=JobListResponse)
 def list_jobs() -> JobListResponse:
+    """List all jobs with status and progress."""
     with create_session() as session:
         jobs = session.exec(select(Job).order_by(Job.status, Job.priority, Job.created_at)).all()
     return JobListResponse(jobs=jobs)

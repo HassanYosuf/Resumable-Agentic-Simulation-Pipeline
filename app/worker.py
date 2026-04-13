@@ -32,11 +32,14 @@ def claim_next_job() -> Optional[Job]:
             Job.is_cancelled == False,
             (Job.run_after == None) | (Job.run_after <= now),
         )
-        candidates = list(session.exec(statement).unique().all())
+        candidates = session.exec(statement).all()
         if not candidates:
             return None
-        candidates.sort(key=_score_job)
-        job = candidates[0]
+        # Convert to list and sort by score
+        candidates_list = [(c, _score_job(c)) for c in candidates]
+        candidates_list.sort(key=lambda x: x[1])
+        job = candidates_list[0][0]
+        
         job.status = JobStatus.running
         job.last_heartbeat = now
         job.attempts += 1
@@ -107,11 +110,12 @@ async def worker_loop(worker_id: int) -> None:
                 logger.info("Worker %d claimed job %s", worker_id, job.id)
                 await execute_job(job.id)
                 continue
+            # No job claimed, wait before trying again
             await asyncio.sleep(WORKER_SLEEP)
         except asyncio.CancelledError:
             break
-        except Exception:
-            logger.exception("Worker %d encountered an error", worker_id)
+        except Exception as e:
+            logger.exception("Worker %d encountered an error: %s", worker_id, e)
             await asyncio.sleep(WORKER_SLEEP)
 
 
