@@ -4,21 +4,21 @@ A FastAPI-based job execution engine for long-running scientific simulation work
 
 ## Features Implemented
 
-### Core (✅ Complete)
+### Core
 - **Job Queue**: Async background workers pull and execute jobs from a persistent queue
 - **Persistent State**: SQLite database stores job metadata, progress, checkpoints, and retry attempts
 - **Status API**: RESTful endpoints for submitting, monitoring, and controlling jobs
 - **Cancellation**: Clean cancellation with immediate status updates and heartbeat tracking
 - **Pause/Resume**: Flag-based pause/resume with checkpoint restoration on resume
 
-### Level 2: Reliability (✅ Complete)
+### Level 2: Reliability
 - **Stale Job Recovery**: Workers detect and requeue jobs that haven't sent heartbeats within 30 seconds
 - **Retry Backoff**: Failed jobs retry up to `max_retries` times with exponential backoff (5s × attempt count)
 - **Priority Scheduling**: Jobs ordered by priority score, with age-based fairness (priority decreases by 1 per 5 minutes of wait)
 - **Worker Heartbeats**: Running jobs update `last_heartbeat` timestamp to signal liveness
 - **Graceful Degradation**: Worker errors are caught and logged; recovery is automatic on next cycle
 
-### Level 3: Intelligence (✅ Complete)
+### Level 3: Intelligence
 - **Natural Language Decomposition**: `POST /jobs/decompose` accepts plain-English instructions and decomposes them into a task DAG
 - **Task Dependency Graph**: Executed tasks respect `depends_on` lists; cycles are detected
 - **Graph Execution**: Workflow executor processes tasks in order, respecting dependencies
